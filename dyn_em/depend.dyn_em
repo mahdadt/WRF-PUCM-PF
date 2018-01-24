@@ -266,6 +266,7 @@ module_first_rk_step_part1.o : \
                 module_em.o \
 		../phys/module_radiation_driver.o \
 		../phys/module_surface_driver.o \
+                ../phys/module_parflow.o \  # This line is to add the module_parflow
 		../phys/module_cumulus_driver.o \
 		../phys/module_shallowcu_driver.o \
 		../phys/module_pbl_driver.o \
