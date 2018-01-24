@@ -386,6 +386,8 @@ module_sf_noahdrv.o: module_sf_noahlsm.o \
 
 module_sf_noahlsm.o: ../share/module_model_constants.o
 
+module_parflow.o:
+
 module_sf_clm.o: module_cam_shr_kind_mod.o \
 		 module_cam_shr_const_mod.o \
 		 module_cam_support.o \
@@ -643,7 +645,8 @@ module_surface_driver.o: \
 		module_sf_ocean_driver.o	\
 		../frame/module_state_description.o \
 		../frame/module_configure.o \
-		../share/module_model_constants.o  
+		../share/module_model_constants.o  \
+		module_parflow.o 
 
 module_sf_ocean_driver.o : \
 		module_sf_oml.o \

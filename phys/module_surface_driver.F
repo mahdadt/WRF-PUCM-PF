@@ -203,6 +203,8 @@ CONTAINS
      &          ,noahres                                              &
              !  Optional adaptive time step
      &          ,bldt,curr_secs,adapt_step_flag,bldtacttime           & 
+         ! Added for parflow
+                ,grid, config_flags                                   &
          ! Optional urban with BEP
      &          ,sf_urban_physics,gmt,xlat,xlong,julday               &
      &          ,num_urban_layers                                     & !multi-layer urban
@@ -241,7 +243,12 @@ CONTAINS
      &        ,TRG_URB2D_mosaic,TRW_URB2D_mosaic,TGG_URB2D_mosaic,TGA_URB2D_mosaic                    & ! danli mosaic 
      &        ,WRG_URB2D_mosaic                                                                                                                                         & ! danli mosaic 
      &        ,TRGL_URB3D_mosaic,TRWL_URB3D_mosaic,TGGL_URB3D_mosaic,TGAL_URB3D_mosaic            & ! danli mosaic           
-     &                                                             )     
+     &                                                             )   
+
+! added for parflow  
+    USE module_domain, ONLY : domain   
+    USE module_configure, ONLY : grid_config_rec_type 
+! added for parflow      
 
               
 #if ( ! NMM_CORE == 1 )
@@ -321,6 +328,7 @@ CONTAINS
    USE module_sf_sfcdiags_ruclsm
    USE module_sf_sstskin
    USE module_sf_tmnupdate
+   USE module_parflow 
 !
 !  This driver calls subroutines for the surface parameterizations.
 !
@@ -743,6 +751,11 @@ CONTAINS
    REAL,       INTENT(IN   ),OPTIONAL    ::     curr_secs
    LOGICAL,    INTENT(IN   ),OPTIONAL    ::     adapt_step_flag
    REAL,       INTENT(INOUT),OPTIONAL    ::     bldtacttime  
+                                         
+! added for parflow                   
+    TYPE ( domain ), INTENT(INOUT) :: grid   
+    TYPE ( grid_config_rec_type ), INTENT(IN) :: config_flags  
+! added for parflow                     
 
 !  arguments for NCAR surface physics
 
@@ -2242,8 +2255,11 @@ CONTAINS
                 a_u_bep,a_v_bep,a_t_bep,a_q_bep,                & !O multi-layer urban
                 a_e_bep,b_u_bep,b_v_bep,                        & !O multi-layer urban
                 b_t_bep,b_q_bep,b_e_bep,dlg_bep,                & !O multi-layer urban
-                dl_u_bep,sf_bep,vl_bep                          & !O multi-layer urban
-                ,sfcheadrt,INFXSRT, soldrain)
+                dl_u_bep,sf_bep,vl_bep,                         & !O multi-layer urban
+                sfcheadrt,INFXSRT, soldrain,                    & !O multi-layer urban
+                grid, config_flags                              & !For parflow
+                )
+
 
 	                  
 	                  
@@ -2309,7 +2325,9 @@ CONTAINS
                 a_e_bep,b_u_bep,b_v_bep,                        & !O multi-layer urban
                 b_t_bep,b_q_bep,b_e_bep,dlg_bep,                & !O multi-layer urban
                 dl_u_bep,sf_bep,vl_bep                          & !O multi-layer urban
-                ,sfcheadrt,INFXSRT, soldrain)
+                sfcheadrt,INFXSRT, soldrain,                    & !O multi-layer urban
+                grid, config_flags                              & !For parflow
+                )
                 	                  
 
          ENDIF
@@ -2389,6 +2407,26 @@ CONTAINS
                IF(PRESENT(ACGRDFLX))ACGRDFLX(I,J)=ACGRDFLX(I,J) + GRDFLX(I,J)*DT
            ENDDO
            ENDDO
+
+           ! Run parflow
+#if ( WRF_PFWRF==1 )
+           WRITE(*,*) 'contemplating parflow_advance t = ' , curr_secs, ' seconds ' , grid%itimestep
+#endif
+           IF ( config_flags%parflow ) THEN
+              ! Only run PF on subcycling intervals
+#if ( WRF_PFWRF==1 )
+              IF ( (grid%parflow_subcycle .EQ. 1) .OR.                                                &
+                   (MOD(grid%itimestep,grid%parflow_subcycle) .EQ. 1) ) THEN
+                 WRITE(*,*) 'running  parflow_advance t = ' , curr_secs, ' seconds ' , grid%itimestep
+                 CALL parflow_run( DTBL*grid%parflow_subcycle,  &
+                      curr_secs, ims,ime,jms,jme,i_start(1),i_end(1),          &
+                      j_start(1),j_end(1), num_soil_layers,                    &
+                      grid%PF_FLUX, grid%PF_PRESSURE, grid%PF_POROSITY, grid%PF_SATURATION)
+              ENDIF
+#else
+                 call wrf_error_fatal ( 'WRF is not compiled to run with ParFlow.' )
+#endif
+           ENDIF
 
           CALL SFCDIAGS(HFX,QFX,TSK,QSFC,CHS2,CQS2,T2,TH2,Q2,      &
                      PSFC,CP,R_d,RCP,CHS,t_phy,qv_curr,ua_phys,    &

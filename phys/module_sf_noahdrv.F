@@ -85,9 +85,16 @@ CONTAINS
                   a_u_bep,a_v_bep,a_t_bep,a_q_bep,              & !O multi-layer urban
                   a_e_bep,b_u_bep,b_v_bep,                      & !O multi-layer urban
                   b_t_bep,b_q_bep,b_e_bep,dlg_bep,              & !O multi-layer urban
-                  dl_u_bep,sf_bep,vl_bep,sfcheadrt,INFXSRT, soldrain      )   !O multi-layer urban         
+                  dl_u_bep,sf_bep,vl_bep,sfcheadrt,INFXSRT, soldrain,      &   !O multi-layer urban         
+                  grid, config_flags                            ) !parflow
 
 !----------------------------------------------------------------
+
+! added for parflow
+    USE module_domain, ONLY : domain 
+    USE module_configure, ONLY : grid_config_rec_type
+! added for parflow        
+
     IMPLICIT NONE
 !----------------------------------------------------------------
 !----------------------------------------------------------------
@@ -490,6 +497,10 @@ CONTAINS
      REAL, DIMENSION( ims:ime, jms:jme ), INTENT(IN) :: FRC_URB2D
      INTEGER, DIMENSION( ims:ime, jms:jme ), INTENT(IN) :: UTYPE_URB2D
 
+! added for parflow 
+    TYPE ( domain ), INTENT(INOUT) :: grid 
+    TYPE ( grid_config_rec_type ), INTENT(IN) :: config_flags 
+! added for parflow
 
 ! output variables urban --> lsm
      REAL :: TS_URB     ! surface radiative temperature    [K]
@@ -512,6 +523,14 @@ CONTAINS
      REAL :: CHS_URB
      REAL :: CHS2_URB
      REAL :: UST_URB
+
+  
+! Needed by parflow
+     REAL :: PCPDRP
+                  
+     REAL :: LVH2O     ! heat of vaporization
+     PARAMETER(LVH2O = 2.501E+6)
+                                    
 ! NUDAPT Parameters urban --> lam
      REAL :: mh_urb
      REAL :: stdh_urb
@@ -907,7 +926,7 @@ CONTAINS
                  SMCWLT,SMCDRY,SMCREF,SMCMAX,NROOT,               &
                  sfcheadrt(i,j),                                   &    !I
                  INFXSRT(i,j),ETPND1                          &    !O
-                 )
+                 PCPDRP, config_flags%parflow)
 
 #ifdef WRF_HYDRO
                  soldrain(i,j) = RUNOFF2*DT*1000.0
@@ -1023,6 +1042,80 @@ CONTAINS
 ! Calculate momentum flux from rural surface for use with multi-layer UCM (Martilli et al. 2002)
 
           DO 80 NS=1,NSOIL
+          ! Code for parflow coupling
+#if (WRF_PFWRF==1)
+             if ( config_flags%parflow ) then
+                if ( NS .EQ. 1 ) then
+                   ! The old non subcycling eqn. for reference
+                   ! grid%PF_FLUX(i,NS,j) = ((edir + et(NS))/LVH2O)*3.6d0 - drip*3600.d0
+
+                   ! Units 
+                   ! PCPDRP IS UNITS OF KG/M**2/S OR MM/S
+                   ! @RMM actually, I think PCPDRP IS UNITS OF M/S even though it says otherwise
+                   ! EDIR = W/m^2 = J/S/m^2
+                   ! LVH2O = J/Kg
+                   ! EDIR/LVH2O= Kg/s/m^2
+                   ! 1000kg H2O = 1m3 H2O so
+                   ! EDIR/LVH2O = mm/s H2O
+                   ! gives us 3.6 and m/hour units (hour timestep
+                   ! units in parflow correlate to K units of m/hour
+                   ! which are specified in .tcl file and dictate all temporal scales for PF run
+                   !
+                   ! Accumulate in values in J/M^2.  It would probably be easier to
+                   ! do this as a rate in this first pass but when we
+                   ! try variable timesteps keeping track of amounts
+                   ! should be easier.
+                   grid%PF_PCPDRP_ACCUMULATOR(i,NS,j) = grid%PF_PCPDRP_ACCUMULATOR(i,NS,j) + PCPDRP * DT*1000.d0
+                   grid%PF_EDIR_ACCUMULATOR(i,NS,j) = grid%PF_EDIR_ACCUMULATOR(i,NS,j) + edir * DT
+                   grid%PF_ET_ACCUMULATOR(i,NS,j)   = grid%PF_ET_ACCUMULATOR(i,NS,j)   + et(NS) * DT
+
+                   ! If we are running PF this timestep then compute fluxes
+                   IF ( (grid%parflow_subcycle .EQ. 1) .OR.                                                &
+                        (MOD(grid%itimestep,grid%parflow_subcycle) .EQ. 1) ) THEN
+                      ! Time weighted average over subcycles.
+                      ! @RMM 6-3-09 fix for direction of rainfall ET
+                      grid%PF_FLUX(i,NS,j) =                                                               &
+                          - ((grid%PF_EDIR_ACCUMULATOR(i,NS,j) + grid%PF_ET_ACCUMULATOR(i,NS,j)) / LVH2O   &
+                          - grid%PF_PCPDRP_ACCUMULATOR(i,NS,j) ) *                                         &
+                           (3.6d0 / (grid%parflow_subcycle * DT))
+
+                      ! PARFLOW needs units of 1/h for PF_FLUX so divide by dz
+                      grid%PF_FLUX(i,NS,j) = grid%PF_FLUX(i,NS,j) / DZS(NS)
+
+                !print*, grid%PF_FLUX(i,NS,j),i,NS,j
+                      ! reset accumulators
+                      grid%PF_PCPDRP_ACCUMULATOR(i,NS,j) = 0.d0
+                      grid%PF_EDIR_ACCUMULATOR(i,NS,j) = 0.d0
+                      grid%PF_ET_ACCUMULATOR(i,NS,j)   = 0.d0
+                   ENDIF
+                else
+                   ! The old non subcycling eqn. for reference
+                   ! grid%PF_FLUX(i,NS,j) = (et(NS)/LVH2O)*3.6d0
+
+
+                   ! Accumulate in values in m.  It would probably be easier to
+                   ! do this as a rate in this first pass but when we
+                   ! try variable timesteps keeping track of amounts
+                   ! should be easier.
+                   grid%PF_ET_ACCUMULATOR(i,NS,j) = grid%PF_ET_ACCUMULATOR(i,NS,j) + et(NS) * DT
+
+                   ! If we are running PF this timestep then compute fluxes
+                   IF ( (grid%parflow_subcycle .EQ. 1) .OR.                                                &
+                        (MOD(grid%itimestep,grid%parflow_subcycle) .EQ. 1) ) THEN
+                      grid%PF_FLUX(i,NS,j) =                                                               &
+                           - ( grid%PF_ET_ACCUMULATOR(i,NS,j) / LVH2O ) *                                  &
+                           (3.6d0 / (grid%parflow_subcycle * DT))
+
+                      ! PARFLOW needs units of 1/h for PF_FLUX so divide by dz
+                      grid%PF_FLUX(i,NS,j) = grid%PF_FLUX(i,NS,j) / DZS(NS)
+
+                      ! reset accumulators
+                      grid%PF_ET_ACCUMULATOR(i,NS,j)   = 0.d0
+                   ENDIF
+                endif
+             endif
+#endif
+
            SMOIS(I,NS,J)=SMC(NS)
            TSLB(I,NS,J)=STC(NS)                                        !  STEMP
            SH2O(I,NS,J)=SWC(NS)
@@ -2900,6 +2993,15 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
       !FEI: temporaray arrays above need to be changed later by using SI
       
                 DO NS=1,NSOIL
+      !Plug in parflow soil moistures     
+#if (WRF_PFWRF==1)                         
+            IF ( config_flags%parflow ) THEN
+               SMOIS(I,NS,J) = grid%PF_SATURATION(I,NS,J)*grid%PF_POROSITY(I,NS,J)
+               SH2O(I,NS,J) = SMOIS(I,NS,J)              
+               if(SH2O(I,NS,J)<=0.) SH2O(I,NS,J) = 0.01   
+            ENDIF
+#endif 
+                
                   SMC(NS)=SMOIS(I,NS,J)
                   STC(NS)=TSLB(I,NS,J)                                          !STEMP
                   SWC(NS)=SH2O(I,NS,J)
