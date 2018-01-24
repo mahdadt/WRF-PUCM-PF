@@ -692,6 +692,34 @@ while ( <ARCH_PREAMBLE> )
         }
     }
 
+  # PARFLOW substitutions in preamble
+  if ( $ENV{WRF_PFWRF} eq "1" )
+      {
+       $pf_parflow = "-L\${PARFLOW_DIR}/lib -lparflow -lkinsol -lamps -lamps_common -lamps -lamps_common" ;
+       if ( $ENV{USE_HYPRE} )
+         {
+          $pf_hyp = "-L\${HYPRE_DIR}/lib -lHYPRE" ;
+         } else {
+          $pf_hyp = "" ;
+         }
+       if ( $ENV{USE_SILO} )
+         {
+          $pf_silo = "-L\${SILO_DIR}/lib -lsilo" ;
+         } else {
+          $pf_silo = "" ;
+         }
+       $pf_string = "LIB_LOCAL           = $pf_parflow $pf_hyp $pf_silo" ;
+       $pf_message = "#### This line added to connect to ParFlow ####" ;
+       $pf_core = "-DWRF_PFWRF=1" ;
+       $_ =~ s:PFWRFMSG:$pf_message:g ;
+       $_ =~ s:PFWRFLIBS:$pf_string:g ;
+       $_ =~ s:PFWRFCORE:$pf_core:g ;
+      } else {
+       $_ =~ s:PFWRFMSG::g ;
+       $_ =~ s:PFWRFLIBS::g ;
+       $_ =~ s:PFWRFCORE::g ;
+      }
+
   @preamble = ( @preamble, $_ ) ;
   }
 close ARCH_PREAMBLE ;
