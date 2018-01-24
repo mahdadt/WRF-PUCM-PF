@@ -599,7 +599,11 @@ print *,'WATER CHANGE = ',change_water
                                 ids , ide , jds , jde , kds , kde , &
                                 ims , ime , jms , jme , kms , kme , &
                                 its , ite , jts , jte , kts , kte , &
-                                sf_surface_physics , num_soil_layers , real_data_init_type , &
+                                sf_surface_physics , num_soil_layers , &
+#if ( WRF_PFWRF==1 )            
+                                parflow, pfdzs1, pfdzs2, pfdzs3, pfdzs4, &  
+#endif                                                                     
+                                real_data_init_type , &
                                 num_st_levels_input , num_sm_levels_input , num_sw_levels_input , &
                                 num_st_levels_alloc , num_sm_levels_alloc , num_sw_levels_alloc )
 
@@ -616,6 +620,11 @@ print *,'WATER CHANGE = ',change_water
       INTEGER , INTENT(IN) :: flag_soil_layers, flag_soil_levels, flag_soilhgt
 
       REAL , DIMENSION(ims:ime,jms:jme) , INTENT(IN) :: landmask , sst
+#if ( WRF_PFWRF )
+      REAL , INTENT(IN) :: pfdzs1, pfdzs2, pfdzs3, pfdzs4
+                                                        
+      LOGICAL , INTENT(IN) :: parflow                  
+#endif 
 
       INTEGER , DIMENSION(1:num_st_levels_input) , INTENT(INOUT) :: st_levels_input
       INTEGER , DIMENSION(1:num_sm_levels_input) , INTENT(INOUT) :: sm_levels_input
@@ -788,7 +797,17 @@ print *,'WATER CHANGE = ',change_water
                                  its , ite , jts , jte , kts , kte )
 
       ELSE IF ( ( sf_surface_physics .EQ. LSMSCHEME ) .AND. ( num_soil_layers .GT. 1 ) ) THEN
-         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )
+         !CALL init_soil_depth_2 ( zs , dzs , num_soil_layers ) This would be replaced by ParFlow 
+#if ( WRF_PFWRF==1 )                        
+         IF ( parflow ) THEN  !JLW via JDM 
+           CALL init_soil_depth_2_pf ( zs , dzs , num_soil_layers,    &          
+                                         pfdzs1, pfdzs2, pfdzs3, pfdzs4 )       
+         ELSE                                                                  
+           CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )              
+                                                                             
+         ENDIF  !JLW via JDM                                                
+#endif                                                                    
+                  
          CALL init_soil_2_real ( tsk , tmn , smois , sh2o , tslb , &
                                  st_input , sm_input , sw_input , landmask , sst , &
                                  zs , dzs , &
@@ -1145,6 +1164,38 @@ cycle
       ENDDO
 
    END SUBROUTINE init_soil_depth_2
+
+   SUBROUTINE init_soil_depth_2_pf ( zs , dzs , num_soil_layers,    &
+                                  pfdzs1, pfdzs2, pfdzs3, pfdzs4 )
+
+      IMPLICIT NONE
+
+      INTEGER, INTENT(IN) :: num_soil_layers
+
+      REAL, INTENT(IN) :: pfdzs1, pfdzs2, pfdzs3, pfdzs4
+
+      REAL, DIMENSION(1:num_soil_layers), INTENT(OUT)  ::  zs,dzs
+
+      INTEGER                   ::      l
+
+      dzs(1) = pfdzs1
+      dzs(2) = pfdzs2
+      dzs(3) = pfdzs3
+      dzs(4) = pfdzs4
+
+      IF ( num_soil_layers .NE. 4 ) THEN
+         PRINT '(A)','Usually, the LSM uses 4 layers.  Change this in the namelist.'
+         CALL wrf_error_fatal ( 'LSM_uses_4_layers' )
+      END IF
+
+      zs(1)=.5*dzs(1)
+
+      DO l=2,num_soil_layers
+         zs(l)=zs(l-1)+.5*dzs(l-1)+.5*dzs(l)
+      ENDDO
+
+   END SUBROUTINE init_soil_depth_2_pf
+
 
    SUBROUTINE init_soil_depth_3 ( zs , dzs , num_soil_layers )
 
@@ -3495,7 +3546,9 @@ endif
                                 ids , ide , jds , jde , kds , kde , &
                                 ims , ime , jms , jme , kms , kme , &
                                 its , ite , jts , jte , kts , kte , &
-                                sf_surface_physics , num_soil_layers , real_data_init_type , &
+                                sf_surface_physics , num_soil_layers , &
+                                parflow, pfdzs1, pfdzs2, pfdzs3, pfdzs4, &    
+                                real_data_init_type , &
                                 num_st_levels_input , num_sm_levels_input , num_sw_levels_input , &
                                 num_st_levels_alloc , num_sm_levels_alloc , num_sw_levels_alloc )
 
@@ -3511,6 +3564,10 @@ endif
       INTEGER , INTENT(IN) :: flag_sst, flag_soilt000, flag_soilm000
 
       REAL , DIMENSION(ims:ime,jms:jme) , INTENT(IN) :: landmask , sst
+                                       
+      REAL , INTENT(IN) :: pfdzs1, pfdzs2, pfdzs3, pfdzs4       
+                                                                 
+      LOGICAL , INTENT(IN) :: parflow 
 
       INTEGER , DIMENSION(1:num_st_levels_input) , INTENT(INOUT) :: st_levels_input
       INTEGER , DIMENSION(1:num_sm_levels_input) , INTENT(INOUT) :: sm_levels_input
@@ -3539,7 +3596,14 @@ endif
 
       ELSE IF ( ( sf_surface_physics .EQ. LSMSCHEME .or. sf_surface_physics .eq. 88 ) .AND. &
                 ( num_soil_layers .GT. 1 ) ) THEN
-         CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )
+         IF ( parflow ) THEN  !JLW via JDM                                           |           CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )                      
+           CALL init_soil_depth_2_pf ( zs , dzs , num_soil_layers,    &              
+                                         pfdzs1, pfdzs2, pfdzs3, pfdzs4 )           
+         ELSE                                                                      
+           CALL init_soil_depth_2 ( zs , dzs , num_soil_layers )                  
+                                                                                
+         ENDIF  !JLW via JDM                                                   
+                                           
          CALL init_soil_2_real ( tsk , tmn , smois , sh2o , tslb , &
                                  st_input , sm_input , sw_input , landmask , sst , &
                                  zs , dzs , &
@@ -3885,6 +3949,37 @@ cycle
       ENDDO
 
    END SUBROUTINE init_soil_depth_2
+
+   SUBROUTINE init_soil_depth_2_pf ( zs , dzs , num_soil_layers,    &
+                                  pfdzs1, pfdzs2, pfdzs3, pfdzs4 )
+
+      IMPLICIT NONE
+
+      INTEGER, INTENT(IN) :: num_soil_layers
+
+      REAL, INTENT(IN) :: pfdzs1, pfdzs2, pfdzs3, pfdzs4
+
+      REAL, DIMENSION(1:num_soil_layers), INTENT(OUT)  ::  zs,dzs
+
+      INTEGER                   ::      l
+
+      dzs(1) = pfdzs1
+      dzs(2) = pfdzs2
+      dzs(3) = pfdzs3
+      dzs(4) = pfdzs4
+
+      IF ( num_soil_layers .NE. 4 ) THEN
+         PRINT '(A)','Usually, the LSM uses 4 layers.  Change this in the namelist.'
+         CALL wrf_error_fatal ( 'LSM_uses_4_layers' )
+      END IF
+
+      zs(1)=.5*dzs(1)
+
+      DO l=2,num_soil_layers
+         zs(l)=zs(l-1)+.5*dzs(l-1)+.5*dzs(l)
+      ENDDO
+
+   END SUBROUTINE init_soil_depth_2_pf
 
    SUBROUTINE init_soil_depth_3 ( zs , dzs , num_soil_layers )
 
