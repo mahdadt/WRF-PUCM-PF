@@ -816,6 +816,14 @@ CONTAINS
 !FEI: temporaray arrays above need to be changed later by using SI
 
           DO NS=1,NSOIL
+      !Plug in parflow soil moistures     
+#if (WRF_PFWRF==1)                         
+            IF ( config_flags%parflow ) THEN
+               SMOIS(I,NS,J) = grid%PF_SATURATION(I,NS,J)*grid%PF_POROSITY(I,NS,J)
+               SH2O(I,NS,J) = SMOIS(I,NS,J)              
+               if(SH2O(I,NS,J)<=0.) SH2O(I,NS,J) = 0.01   
+            ENDIF
+#endif 
             SMC(NS)=SMOIS(I,NS,J)
             STC(NS)=TSLB(I,NS,J)                                          !STEMP
             SWC(NS)=SH2O(I,NS,J)
@@ -2993,15 +3001,6 @@ SUBROUTINE lsm_mosaic(DZ8W,QV3D,P8W3D,T3D,TSK,                      &
       !FEI: temporaray arrays above need to be changed later by using SI
       
                 DO NS=1,NSOIL
-      !Plug in parflow soil moistures     
-#if (WRF_PFWRF==1)                         
-            IF ( config_flags%parflow ) THEN
-               SMOIS(I,NS,J) = grid%PF_SATURATION(I,NS,J)*grid%PF_POROSITY(I,NS,J)
-               SH2O(I,NS,J) = SMOIS(I,NS,J)              
-               if(SH2O(I,NS,J)<=0.) SH2O(I,NS,J) = 0.01   
-            ENDIF
-#endif 
-                
                   SMC(NS)=SMOIS(I,NS,J)
                   STC(NS)=TSLB(I,NS,J)                                          !STEMP
                   SWC(NS)=SH2O(I,NS,J)
