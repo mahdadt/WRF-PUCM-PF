@@ -2324,7 +2324,7 @@ CONTAINS
                 a_u_bep,a_v_bep,a_t_bep,a_q_bep,                & !O multi-layer urban
                 a_e_bep,b_u_bep,b_v_bep,                        & !O multi-layer urban
                 b_t_bep,b_q_bep,b_e_bep,dlg_bep,                & !O multi-layer urban
-                dl_u_bep,sf_bep,vl_bep                          & !O multi-layer urban
+                dl_u_bep,sf_bep,vl_bep,                         & !O multi-layer urban
                 sfcheadrt,INFXSRT, soldrain,                    & !O multi-layer urban
                 grid, config_flags                              & !For parflow
                 )

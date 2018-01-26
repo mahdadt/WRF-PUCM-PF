@@ -694,7 +694,7 @@ BENCH_START(surf_driver_tim)
      &        ,QSG=grid%qsg,QVG=grid%qvg,QCG=grid%qcg,SOILT1=grid%soilt1,TSNAV=grid%tsnav & ! ruc lsm
      &        ,SMFR3D=grid%smfr3d,KEEPFR3DFLAG=grid%keepfr3dflag,DEW=grid%dew             & ! ruc lsm
      &        ,POTEVP=grid%POTEVP, SNOPCX=grid%SNOPCX, SOILTB=grid%SOILTB                 & ! ruc lsm
-     &        ,grid=grid, config_flags=config_flags
+     &        ,grid=grid, config_flags=config_flags                                      & ! Added for parflow
      &        ,MOSAIC_LU=config_flags%mosaic_lu                           &   ! RUC LSM
      &        ,MOSAIC_SOIL=config_flags%mosaic_soil                       &   ! RUC LSM
      &        ,ISURBAN=isurban, MMINLU=TRIM(mminlu)                       &
