@@ -386,7 +386,7 @@ BENCH_END(rad_driver_tim)
       IF ( config_flags%parflow ) THEN
          IF ( ( grid%itimestep .EQ. 1 ) .OR. ( config_flags%restart ) ) THEN
             CALL parflow_init( ims, ime, jms, jme, grid%num_soil_layers, &
-     &           grid%PF_FLUX, grid%PF_PRESSURE, grid%PF_POROSITY, grid%PF_SATURATION
+     &           grid%PF_FLUX, grid%PF_PRESSURE, grid%PF_POROSITY, grid%PF_SATURATION, &
      &           config_flags%parflowinput)
          ENDIF
       ENDIF

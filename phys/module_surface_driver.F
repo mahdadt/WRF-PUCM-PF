@@ -204,7 +204,7 @@ CONTAINS
              !  Optional adaptive time step
      &          ,bldt,curr_secs,adapt_step_flag,bldtacttime           & 
          ! Added for parflow
-                ,grid, config_flags                                   &
+     &          ,grid, config_flags                                   &
          ! Optional urban with BEP
      &          ,sf_urban_physics,gmt,xlat,xlong,julday               &
      &          ,num_urban_layers                                     & !multi-layer urban
