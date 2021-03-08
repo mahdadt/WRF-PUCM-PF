@@ -1,6 +1,6 @@
 WRF-PUCM-PF is a fully-coupled atmosphere-land surface-subsurface 
 model developed for urban areas. It is built by coupling WRF-PUCM 
-(Li & Bou-Zeid, 2013, 2014; Wang, Bou-Zeid, & Smith, 2011) and 
+(Li & Bou-Zeid, 2013, 2014; Wang, Bou-Zeid, & Smith, 2013) and 
 ParFlow (Ashby and Falgout, 1996; Jones and Woodward, 2001; 
 Maxwell, 2013; Kollet and Maxwell, 2006). To couple the two code, 
 the approach developed and introduced by Maxwell et al. (2011) was 
@@ -9,3 +9,44 @@ utilized.
 WRF-PUCM is based on WRF-3.5.0. Most versions of ParFlow could be 
 used to couple to ParFlow. ParFlow 3.3.1 to 3.6.0 have been 
 successfully coupled to ParFlow. 
+
+Refrences:
+Ashby, S. F., & Falgout, R. D. (1996). A Parallel Multigrid 
+Preconditioned Conjugate Gradient Algorithm for Groundwater 
+Flow Simulations. Nuclear Science and Engineering, 124(1), 
+145–159. https://doi.org/10.13182/NSE96-A24230
+
+Jones, J. E., & Woodward, C. S. (2001). Newton–Krylov-multigrid 
+solvers for large-scale, highly heterogeneous, variably saturated 
+flow problems. Advances in Water Resources, 24(7), 763–774. 
+https://doi.org/10.1016/S0309-1708(00)00075-0
+
+Kollet, S. J., & Maxwell, R. M. (2006). Integrated surface–groundwater 
+flow modeling: A free-surface overland flow boundary condition in a 
+parallel groundwater flow model. Advances in Water Resources, 
+29(7), 945–958. https://doi.org/10.1016/j.advwatres.2005.08.006
+
+Li, D., & Bou-Zeid, E. (2014). Quality and sensitivity of 
+high-resolution numerical simulation of urban heat islands. 
+Environmental Research Letters, 9(5). 
+https://doi.org/10.1088/1748-9326/9/5/055001
+
+Maxwell, R. M. (2013). A terrain-following grid transform and 
+preconditioner for parallel, large-scale, integrated hydrologic 
+modeling. Advances in Water Resources, 53, 109–117. 
+https://doi.org/10.1016/j.advwatres.2012.10.001
+
+Maxwell, R. M., & Miller, N. L. (2005). Development of a Coupled 
+Land Surface and Groundwater Model. Journal of Hydrometeorology, 
+6(3), 233–247. https://doi.org/10.1175/JHM422.1
+
+Skamarock, W. C., Klemp, J. B., Dudhia, J., Gill, D. O., Barker, 
+D. M., Duda, M. G., … Powers, J. G. (2008). A DESCRIPTION OF 
+THE ADVANCED RESEARCH WRF VERSION 3. NCAR Technical Note. 
+https://doi.org/10.5065/D68S4MVH
+
+Wang, Z.-H., Bou-Zeid, E., & Smith, J. A. (2013). A coupled energy 
+transport and hydrological model for urban canopies evaluated using
+a wireless sensor network. Quarterly Journal of the Royal 
+Meteorological Society, 139(675), 1643–1657. 
+https://doi.org/10.1002/qj.2032
